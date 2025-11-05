@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatBox = document.getElementById('chat-box');
     const resultsContainer = document.getElementById('results-container');
     
-    // Variable to store the last list of stocks for the "Back" button
+    // Variable to store the last list of stocks for the "Back" button functionality
     let lastStockResults = [];
 
     const addMessage = (message, sender) => {
@@ -38,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
         addMessage(query, 'user');
         userInput.value = '';
 
-        // Add the bot's "thinking" message directly
         const thinkingMessage = document.createElement('div');
         thinkingMessage.classList.add('chat-message', 'bot-message', 'processing');
         thinkingMessage.innerHTML = `<p>Analyzing data...</p><div class="dot-flashing"></div>`;
@@ -48,7 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showProcessing(resultsContainer);
 
         try {
-            const response = await fetch('https://stock-hunt-production.up.railway.app/api/screen', {
+            // UPDATED: The URL is now a relative path, pointing to our own server.
+            const response = await fetch('/api/screen', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: query }),
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.response) addMessage(data.response, 'bot');
             
             if (data.stocks && data.stocks.length > 0) {
-                lastStockResults = data.stocks; // Save results
+                lastStockResults = data.stocks;
                 renderStockList(lastStockResults);
             } else {
                 resultsContainer.innerHTML = '<p class="error-message">No stocks found matching your criteria.</p>';
@@ -72,11 +72,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error fetching data:', error);
             removeProcessingAnimation();
             addMessage('Sorry, something went wrong. Please check the console.', 'bot');
-            resultsContainer.innerHTML = `<p class="error-message">Error: ${error.message}. Is the backend server running?</p>`;
+            resultsContainer.innerHTML = `<p class="error-message">Error: ${error.message}. Could not connect to the API.</p>`;
         }
     };
     
-    // Renders the initial list of stocks
     const renderStockList = (stocks) => {
         let content = '<h2>Recommended Stocks</h2>';
         content += '<table class="stock-table"><thead><tr><th>Symbol</th><th>Company</th><th>Price</th><th>Reason</th></tr></thead><tbody>';
@@ -101,11 +100,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Fetches and renders the detailed view for a single stock
     const fetchAndRenderStockDetails = async (symbol) => {
         showProcessing(resultsContainer);
         try {
-            const response = await fetch(`https://stock-hunt-production.up.railway.app/api/stock_details/${symbol}`);
+            // UPDATED: This URL is also a relative path.
+            const response = await fetch(`/api/stock_details/${symbol}`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             renderDetailedView(data);
@@ -115,43 +114,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Renders the beautiful detailed view
     const renderDetailedView = (data) => {
         const formatMarketCap = (num) => {
+            if (!num) return 'N/A';
             if (num > 1_000_000_000_000) return `${(num / 1_000_000_000_000).toFixed(2)} T`;
             if (num > 1_000_000_000) return `${(num / 1_000_000_000).toFixed(2)} B`;
             if (num > 1_000_000) return `${(num / 1_000_000).toFixed(2)} M`;
-            return num;
+            return num.toLocaleString();
         };
         
         let content = `
             <div class="stock-detail-view">
                 <button class="back-button">&larr; Back to List</button>
                 <div class="stock-detail-header">
-                    <img src="${data.image}" alt="${data.companyName} logo" class="company-logo">
+                    <img src="${data.image}" alt="${data.companyName} logo" class="company-logo" onerror="this.style.display='none'">
                     <div>
                         <h2>${data.companyName} (${data.symbol})</h2>
-                        <p class="exchange">${data.exchange} | ${data.sector}</p>
+                        <p class="exchange">${data.exchange || ''} | ${data.sector || ''}</p>
                     </div>
                 </div>
                 <div class="stock-price-main">$${data.price ? data.price.toFixed(2) : 'N/A'}</div>
                 <div class="stock-detail-metrics">
-                    <div class="metric-item"><span>Day High</span><span>$${data.dayHigh.toFixed(2)}</span></div>
-                    <div class="metric-item"><span>Day Low</span><span>$${data.dayLow.toFixed(2)}</span></div>
-                    <div class="metric-item"><span>Year High</span><span>$${data.yearHigh.toFixed(2)}</span></div>
-                    <div class="metric-item"><span>Year Low</span><span>$${data.yearLow.toFixed(2)}</span></div>
+                    <div class="metric-item"><span>Day High</span><span>$${data.dayHigh ? data.dayHigh.toFixed(2) : 'N/A'}</span></div>
+                    <div class="metric-item"><span>Day Low</span><span>$${data.dayLow ? data.dayLow.toFixed(2) : 'N/A'}</span></div>
+                    <div class="metric-item"><span>Year High</span><span>$${data.yearHigh ? data.yearHigh.toFixed(2) : 'N/A'}</span></div>
+                    <div class="metric-item"><span>Year Low</span><span>$${data.yearLow ? data.yearLow.toFixed(2) : 'N/A'}</span></div>
                     <div class="metric-item"><span>Market Cap</span><span>${formatMarketCap(data.mktCap)}</span></div>
-                    <div class="metric-item"><span>Volume</span><span>${data.volume.toLocaleString()}</span></div>
+                    <div class="metric-item"><span>Volume</span><span>${data.volume ? data.volume.toLocaleString() : 'N/A'}</span></div>
                 </div>
                 <h3>About ${data.companyName}</h3>
-                <p class="company-description">${data.description}</p>
+                <p class="company-description">${data.description || 'No description available.'}</p>
             </div>
         `;
         resultsContainer.innerHTML = content;
 
-        // Add event listener to the new back button
         document.querySelector('.back-button').addEventListener('click', () => {
-            renderStockList(lastStockResults); // Re-render the saved list
+            renderStockList(lastStockResults);
         });
     };
 
@@ -161,4 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     addMessage("Hello! I am your AI Stock Screener. How can I help you find your next investment?", 'bot');
-});
+});```
+
+Please copy this entire block and replace the content of your `script.js` file. Inform me when you have completed this step.

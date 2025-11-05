@@ -66,7 +66,6 @@ body {
     gap: 15px;
 }
 
-/* Custom scrollbar for a modern look */
 .chat-box::-webkit-scrollbar {
     width: 8px;
 }
@@ -127,12 +126,13 @@ body {
     overflow-y: auto;
 }
 
-/* Styles for chat messages that will be added by JavaScript */
+/* --- CHAT MESSAGE STYLES --- */
 .chat-message {
     padding: 12px 18px;
     border-radius: 18px;
     max-width: 80%;
     animation: fadeIn 0.5s ease-in-out;
+    line-height: 1.5;
 }
 
 .user-message {
@@ -149,8 +149,13 @@ body {
     border-bottom-left-radius: 4px;
 }
 
-/* High-end processing animation */
-.bot-message.processing .dot-flashing {
+.bot-message.processing {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dot-flashing {
     position: relative;
     width: 10px;
     height: 10px;
@@ -159,18 +164,16 @@ body {
     color: var(--accent-color);
     animation: dotFlashing 1s infinite linear alternate;
     animation-delay: .5s;
-    display: inline-block; /* to be on the same line as text */
-    margin: 0 4px;
 }
 
-.bot-message.processing .dot-flashing::before, .bot-message.processing .dot-flashing::after {
+.dot-flashing::before, .dot-flashing::after {
     content: '';
     display: inline-block;
     position: absolute;
     top: 0;
 }
 
-.bot-message.processing .dot-flashing::before {
+.dot-flashing::before {
     left: -15px;
     width: 10px;
     height: 10px;
@@ -181,7 +184,7 @@ body {
     animation-delay: 0s;
 }
 
-.bot-message.processing .dot-flashing::after {
+.dot-flashing::after {
     left: 15px;
     width: 10px;
     height: 10px;
@@ -192,26 +195,6 @@ body {
     animation-delay: 1s;
 }
 
-@keyframes dotFlashing {
-    0% {
-        background-color: var(--accent-color);
-    }
-    50%,
-    100% {
-        background-color: rgba(79, 138, 252, 0.2);
-    }
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
 /* --- Styling for Results and Detailed View --- */
 
 .error-message {
@@ -235,6 +218,8 @@ body {
 .stock-table th {
     font-weight: 700;
     color: #a0a0b0;
+    font-size: 14px;
+    text-transform: uppercase;
 }
 
 .stock-item {
@@ -344,4 +329,27 @@ body {
     height: 100%;
     gap: 15px;
     color: #a0a0b0;
+}
+
+
+/* --- ANIMATIONS --- */
+@keyframes dotFlashing {
+    0% {
+        background-color: var(--accent-color);
+    }
+    50%,
+    100% {
+        background-color: rgba(79, 138, 252, 0.2);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
