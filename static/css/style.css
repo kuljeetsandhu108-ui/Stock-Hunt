@@ -298,3 +298,11 @@ h1 {
     padding: 8px 12px;
     border-radius: 8px;
 }
+/* ADD THIS TO THE END OF style.css */
+
+.system-card {
+    background: var(--card-bg);
+    border: 1px solid #8B4513; /* A muted orange to indicate a warning/info */
+    border-radius: 12px;
+    padding: 20px;
+}
