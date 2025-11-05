@@ -1,4 +1,4 @@
-# app.py (GeniusMind FINAL - FMP Centric Architecture)
+# app.py (GeniusMind FINAL v2 - with JSON Extraction)
 
 import os
 from flask import Flask, render_template, request, jsonify
@@ -15,130 +15,131 @@ app = Flask(__name__)
 # --- API Key Configuration ---
 FMP_API_KEY = os.getenv("FMP_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=GEMINI_API_KEY)
+try:
+    genai.configure(api_key=GEMINI_API_KEY)
+except Exception as e:
+    print(f"CRITICAL STARTUP ERROR: Could not configure Gemini AI. Error: {e}")
 
-
-def get_candidate_stocks_from_fmp(query, country):
+# --- NEW: Surgical JSON Extraction Function ---
+def extract_json_from_string(text):
     """
-    FINAL ENGINE: This engine uses ONLY the FMP API for robust screening.
-    It intelligently adds financial metric filters to the initial API call.
+    Finds and extracts the first valid JSON array (starting with '[' and ending with ']')
+    from a larger string, ignoring any text before or after it.
     """
-    print(f"--- FMP-Centric Screening for Country: {country} ---")
-    base_url = f"https://financialmodelingprep.com/api/v3/stock-screener?country={country}&apikey={FMP_API_KEY}"
-    
-    # Keyword analysis for FMP parameters
-    price_match = re.search(r'(under|less than|below|upto)\s*(\d+)', query)
-    if price_match:
-        price_limit = price_match.group(2)
-        print(f"INFO: Price limit found: under {price_limit}.")
-        base_url += f"&priceLowerThan={price_limit}"
-    
-    if "growth" in query:
-        print("INFO: Growth keyword found. Filtering for positive revenue growth.")
-        base_url += "&revenueGrowthMoreThan=0.05" # 5% revenue growth
+    try:
+        # Find the starting position of the JSON array
+        start_index = text.find('[')
+        # Find the last closing bracket of the JSON array
+        end_index = text.rfind(']')
         
-    if "undervalued" in query or "cheap" in query:
-        print("INFO: Value keyword found. Filtering for low P/E and P/B.")
-        base_url += "&isActivelyTrading=true&peRatioLessThan=25&pbRatioLessThan=3"
-        
-    if "safe" in query or "stable" in query or "dividend" in query:
-        print("INFO: Safety keyword found. Filtering for dividends and low beta.")
-        base_url += "&dividendYieldMoreThan=0.01&betaLowerThan=1.2" # 1% dividend yield
-
-    screener_url = f"{base_url}&volumeMoreThan=50000&limit=40" # Always add volume and limit
-    
-    print(f"DEBUG: Final FMP Screener URL: {screener_url}")
-    response = requests.get(screener_url, timeout=15)
-    
-    if response.status_code != 200 or not response.json():
-        print(f"ERROR: FMP Screener returned status {response.status_code}")
-        return []
-        
-    stocks = response.json()
-    print(f"SUCCESS: FMP Screener returned {len(stocks)} candidates.")
-    return [stock['symbol'] for stock in stocks]
+        if start_index != -1 and end_index != -1 and end_index > start_index:
+            # Slice the string to get only the JSON part
+            json_str = text[start_index : end_index + 1]
+            # Parse it to confirm it's valid JSON
+            return json.loads(json_str)
+        else:
+            return None # Return None if no valid array is found
+    except (json.JSONDecodeError, TypeError):
+        return None
 
 
-# --- Main Flask Routes ---
+# --- Robust API Call Function ---
+def make_fmp_request(url):
+    """Makes a request to the FMP API with error handling."""
+    try:
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as req_err:
+        print(f"FMP request error: {req_err}")
+    return None
+
+# --- Main Logic ---
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/api/get_stock_recommendation', methods=['POST'])
 def get_stock_recommendation():
+    print("\n--- NEW REQUEST RECEIVED ---")
     try:
         user_query = request.json.get('query', '').lower()
         country = "IN" if "indian" in user_query else "US"
-        candidate_stocks = get_candidate_stocks_from_fmp(user_query, country)
-        if not candidate_stocks:
-            return jsonify([{"ticker": "SYSTEM", "company_name": "No Stocks Found", "reason": "My professional screening system did not find any stocks matching your specific financial criteria (e.g., price, P/E ratio, growth rate). Please try a broader request."}])
+        print(f"Step 1: Screening. Country: {country}, Query: '{user_query}'")
+
+        base_url = f"https://financialmodelingprep.com/api/v3/stock-screener?country={country}&apikey={FMP_API_KEY}"
+        price_match = re.search(r'(under|less than|below|upto)\s*(\d+)', user_query)
+        if price_match: base_url += f"&priceLowerThan={price_match.group(2)}"
+        if "growth" in user_query: base_url += "&revenueGrowthMoreThan=0.05"
+        if "undervalued" in user_query: base_url += "&peRatioLessThan=25"
+        screener_url = f"{base_url}&volumeMoreThan=50000&limit=40"
+        
+        candidate_list = make_fmp_request(screener_url)
+        if not candidate_list:
+            return jsonify([{"ticker": "SYSTEM", "company_name": "No Stocks Found", "reason": "My screening system could not find any stocks matching your specific criteria. Please try a broader request."}])
+
+        candidate_stocks = [stock.get('symbol') for stock in candidate_list if stock.get('symbol')]
+        print(f"Step 2: Found {len(candidate_stocks)} candidates. Aggregating data.")
 
         quant_profiles = []
-        for ticker in candidate_stocks[:20]:
-            print(f"--- Aggregating FMP data for {ticker} ---")
-            try:
-                # Use FMP for ALL quantitative data
-                profile_url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={FMP_API_KEY}"
-                ratios_url = f"https://financialmodelingprep.com/api/v3/ratios-ttm/{ticker}?apikey={FMP_API_KEY}"
-                
-                profile_res = requests.get(profile_url, timeout=10)
-                ratios_res = requests.get(ratios_url, timeout=10)
-                
-                if profile_res.status_code != 200 or not profile_res.json():
-                    continue # Skip if we can't get a basic profile
+        for ticker in candidate_stocks[:15]:
+            profile_url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={FMP_API_KEY}"
+            ratios_url = f"https://financialmodelingprep.com/api/v3/ratios-ttm/{ticker}?apikey={FMP_API_KEY}"
+            profile_data_list = make_fmp_request(profile_url)
+            if not profile_data_list or not isinstance(profile_data_list, list) or len(profile_data_list) == 0: continue
+            
+            profile_data = profile_data_list[0]
+            ratios_data_list = make_fmp_request(ratios_url)
+            ratios_data = ratios_data_list[0] if ratios_data_list and isinstance(ratios_data_list, list) and len(ratios_data_list) > 0 else {}
 
-                profile_data = profile_res.json()[0]
-                ratios_data = ratios_res.json()[0] if ratios_res.status_code == 200 and ratios_res.json() else {}
-
-                # Build the complete profile from our reliable API source
-                profile = {
-                    "ticker": profile_data.get('symbol'),
-                    "companyName": profile_data.get('companyName'),
-                    "sector": profile_data.get('sector'),
-                    "marketCap": profile_data.get('mktCap'),
-                    "peRatio": ratios_data.get('priceEarningsRatioTTM'),
-                    "priceToSalesRatio": ratios_data.get('priceToSalesRatioTTM'),
-                    "returnOnEquity": ratios_data.get('returnOnEquityTTM'),
-                    "debtToEquityRatio": ratios_data.get('debtToEquityRatioTTM'),
-                }
-                quant_profiles.append(profile)
-                print(f"SUCCESS: Profile for {ticker} built from FMP.")
-            except Exception as e:
-                print(f"ERROR: Failed during FMP data aggregation for {ticker}. Reason: {e}")
-                continue
+            quant_profiles.append({
+                "ticker": profile_data.get('symbol'), "companyName": profile_data.get('companyName'),
+                "marketCap": profile_data.get('mktCap'), "peRatio": ratios_data.get('priceEarningsRatioTTM'),
+                "priceToSalesRatio": ratios_data.get('priceToSalesRatioTTM'),
+            })
 
         if not quant_profiles:
-             return jsonify([{"ticker": "SYSTEM", "company_name": "Data Aggregation Failed", "reason": "I found a list of stocks, but I was unable to retrieve their detailed financial profiles from the provider. This may be a temporary API issue."}])
-
-        print(f"SUCCESS: Assembled {len(quant_profiles)} profiles for AI analysis.")
+             return jsonify([{"ticker": "SYSTEM", "company_name": "Data Aggregation Failed", "reason": "I found stocks, but could not retrieve their detailed financial profiles. This may be a temporary API issue."}])
         
-        # --- AI Analysis Step (unchanged but with better data) ---
+        print(f"Step 3: Aggregated {len(quant_profiles)} profiles. Calling AI.")
+        
+        # --- REINFORCED AI PROMPT ---
         model = genai.GenerativeModel('gemini-2.5-flash')
-        prompt = f"Act as a senior Quantitative Financial Analyst. Your user's goal is '{user_query}'. Analyze these stocks based on this high-quality data: {json.dumps(quant_profiles, indent=2)}. You MUST select the top 3-4 stocks and provide a data-driven reason citing at least two metrics from the data. Format as a valid JSON array of objects with keys: 'ticker', 'company_name', 'reason'."
+        prompt = f"""
+        **CRITICAL INSTRUCTION:** Your ONLY output must be a valid JSON array of objects. Do NOT include any introductory text, explanations, markdown, or anything before the opening '[' or after the final ']'. Your entire response MUST be the JSON itself.
+
+        **Task:** Act as a Quantitative Analyst. Analyze these stocks: {json.dumps(quant_profiles, indent=2)}.
+        **User Goal:** '{user_query}'.
+        **Action:** Select the top 3 stocks. Provide a short, data-driven reason for each.
+        **JSON Format:** `[{{"ticker": "...", "company_name": "...", "reason": "..."}}]`
+        """
         
         response = model.generate_content(prompt)
-        cleaned_response = response.text.strip().replace('```json', '').replace('```', '').strip()
+        print(f"Step 4: AI has responded. Now attempting to parse.")
+
+        # --- FINAL FIX: Use the JSON Extractor ---
+        parsed_json = extract_json_from_string(response.text)
         
-        try:
-            return jsonify(json.loads(cleaned_response))
-        except json.JSONDecodeError:
-            return jsonify([{"ticker": "SYSTEM", "company_name": "AI Error", "reason": "The AI analysis module failed to return a valid response after processing the financial data."}])
+        if parsed_json:
+            print("Step 5: JSON successfully extracted and parsed. Sending response.")
+            return jsonify(parsed_json)
+        else:
+            print(f"CRITICAL ERROR: Failed to extract valid JSON from AI response. Full Response: {response.text}")
+            return jsonify([{"ticker": "SYSTEM", "company_name": "AI Format Error", "reason": "The AI analysis module returned a response, but my extraction engine could not parse it. This is a temporary system issue."}])
 
     except Exception as e:
-        print(f"FATAL ERROR in main process: {e}")
+        print(f"FATAL UNHANDLED EXCEPTION in main process: {e}")
         return jsonify({"error": "A fatal internal server error occurred."}), 500
 
-# get_stock_details endpoint remains the same, as it's a single, reliable call
+
 @app.route('/api/get_stock_details/<string:ticker>')
 def get_stock_details(ticker):
-    try:
-        profile_url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={FMP_API_KEY}"
-        response = requests.get(profile_url, timeout=10)
-        if response.status_code != 200 or not response.json():
-            return jsonify({"error": "Could not retrieve FMP data."}), 404
-        return jsonify(response.json()[0])
-    except Exception as e:
-        return jsonify({"error": f"An internal error occurred: {e}"}), 500
+    profile_url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={FMP_API_KEY}"
+    profile_data = make_fmp_request(profile_url)
+    if not profile_data or not isinstance(profile_data, list) or len(profile_data) == 0:
+        return jsonify({"error": "Could not retrieve data for this stock."}), 404
+    return jsonify(profile_data[0])
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
