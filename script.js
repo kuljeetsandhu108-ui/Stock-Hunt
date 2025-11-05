@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showProcessing(resultsContainer);
 
         try {
-            const response = await fetch('http://127.0.0.1:5000/api/screen', {
+            const response = await fetch('https://stock-hunt-production.up.railway.app/api/screen', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: query }),
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchAndRenderStockDetails = async (symbol) => {
         showProcessing(resultsContainer);
         try {
-            const response = await fetch(`http://127.0.0.1:5000/api/stock_details/${symbol}`);
+            const response = await fetch(`https://stock-hunt-production.up.railway.app/api/stock_details/${symbol}`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             renderDetailedView(data);
