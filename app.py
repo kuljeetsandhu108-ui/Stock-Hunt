@@ -1,7 +1,7 @@
 import os
 import time
 import json
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import requests
 from dotenv import load_dotenv
@@ -29,21 +29,20 @@ else:
 FMP_BASE_URL = "https://financialmodelingprep.com/api/v3"
 
 # --- FLASK APP INITIALIZATION ---
-# This configuration correctly tells Flask to serve static files (html, css, js) from the current directory.
-# Flask will now automatically handle serving style.css and script.js when requested by index.html.
-app = Flask(__name__, static_folder='.', static_url_path='')
+# Flask will automatically find the 'static' and 'templates' folders.
+app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
 # --- FRONTEND SERVING ROUTE ---
-# This is the only route needed for the frontend. It serves the main page.
+# This single, standard route will render our user interface.
 @app.route('/')
-def serve_index():
-    """Serves the main index.html file to the user when they visit the root URL."""
-    return send_from_directory('.', 'index.html')
+def index():
+    """Renders the index.html file from the 'templates' folder."""
+    return render_template('index.html')
 
 
-# --- API ENDPOINTS (Unchanged logic, confirmed correct) ---
+# --- API ENDPOINTS (Unchanged logic) ---
 @app.route('/api/screen', methods=['POST'])
 def screen_stocks():
     """Handles the user's initial query to find a list of stocks."""
@@ -82,7 +81,7 @@ def stock_details(symbol):
         return jsonify({"error": "Could not retrieve details for the specified stock."}), 404
 
 
-# --- HELPER FUNCTIONS (Corrected and confirmed) ---
+# --- HELPER FUNCTIONS (Unchanged logic) ---
 def get_symbols_from_ai(query):
     if not model: return [] 
     prompt = f'Analyze the following user request and identify relevant stock tickers. Return ONLY a Python list of strings. Example: ["AAPL", "MSFT"]\n\nRequest: "{query}"'
@@ -125,7 +124,7 @@ def get_stock_details(symbol):
             "symbol": profile_data.get('symbol'), "companyName": profile_data.get('companyName'),
             "price": profile_data.get('price'), "image": profile_data.get('image'),
             "exchange": profile_data.get('exchangeShortName'), "industry": profile_data.get('industry'),
-            "sector": profile_data.get('sector'), # THIS LINE IS NOW CORRECTED
+            "sector": profile_data.get('sector'),
             "description": profile_data.get('description'),
             "mktCap": quote_data.get('marketCap'), "dayHigh": quote_data.get('dayHigh'),
             "dayLow": quote_data.get('dayLow'), "yearHigh": quote_data.get('yearHigh'),
