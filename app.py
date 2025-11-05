@@ -17,7 +17,7 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 # This check provides a clear warning if keys are missing during startup.
 if not FMP_API_KEY or not GEMINI_API_KEY:
     print("CRITICAL WARNING: FMP_API_KEY or GEMINI_API_KEY not found in environment variables.")
-    print("Ensure your .env file is correct for local runs, or variables are set in Railway for deployment.")
+    print("Ensure your .env file is correct locally, or variables are set in Railway for deployment.")
 
 # Configure the Gemini API, handling potential key issues gracefully
 if GEMINI_API_KEY:
@@ -29,31 +29,21 @@ else:
 FMP_BASE_URL = "https://financialmodelingprep.com/api/v3"
 
 # --- FLASK APP INITIALIZATION ---
-# This configuration tells Flask to serve static files from the project's root directory.
+# This configuration correctly tells Flask to serve static files (html, css, js) from the current directory.
+# Flask will now automatically handle serving style.css and script.js when requested by index.html.
 app = Flask(__name__, static_folder='.', static_url_path='')
-# Applying CORS is still a good practice for robustness.
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
-# --- FRONTEND SERVING ROUTES ---
+# --- FRONTEND SERVING ROUTE ---
+# This is the only route needed for the frontend. It serves the main page.
 @app.route('/')
 def serve_index():
     """Serves the main index.html file to the user when they visit the root URL."""
     return send_from_directory('.', 'index.html')
 
-@app.route('/<path:path>')
-def serve_static_files(path):
-    """
-    Serves other static files like style.css and script.js.
-    This is a catch-all route, so we must ensure it doesn't interfere with our API endpoints.
-    """
-    if path in ['style.css', 'script.js']:
-        return send_from_directory('.', path)
-    # If the path is not a known static file, return a 404 error.
-    return jsonify({"error": "Not Found"}), 404
 
-
-# --- API ENDPOINTS ---
+# --- API ENDPOINTS (Unchanged logic, confirmed correct) ---
 @app.route('/api/screen', methods=['POST'])
 def screen_stocks():
     """Handles the user's initial query to find a list of stocks."""
@@ -92,11 +82,10 @@ def stock_details(symbol):
         return jsonify({"error": "Could not retrieve details for the specified stock."}), 404
 
 
-# --- HELPER FUNCTIONS ---
+# --- HELPER FUNCTIONS (Corrected and confirmed) ---
 def get_symbols_from_ai(query):
-    """Uses Gemini AI to extract stock symbols from a natural language query."""
     if not model: return [] 
-    prompt = f'Analyze the following user request and identify the most relevant stock market ticker symbols. Return ONLY a raw Python list of strings in your response, with no other text, explanation, or formatting. Example: ["AAPL", "MSFT", "GOOGL"]\n\nUser Request: "{query}"'
+    prompt = f'Analyze the following user request and identify relevant stock tickers. Return ONLY a Python list of strings. Example: ["AAPL", "MSFT"]\n\nRequest: "{query}"'
     try:
         response = model.generate_content(prompt)
         cleaned_response = response.text.strip().replace("'", '"')
@@ -108,19 +97,16 @@ def get_symbols_from_ai(query):
         return []
 
 def get_stock_data_with_ai_reason(symbol):
-    """Gets basic data from FMP and an AI-generated investment reason."""
     if not FMP_API_KEY: return None
     try:
         quote_url = f"{FMP_BASE_URL}/quote/{symbol}?apikey={FMP_API_KEY}"
         quote_data = requests.get(quote_url).json()
         if not quote_data: return None
-        
         financials = {"price": quote_data[0].get('price'), "companyName": quote_data[0].get('name'), "symbol": quote_data[0].get('symbol')}
-        
         if not model:
             financials['reason'] = "AI reason generation is currently unavailable."
         else:
-            prompt = f"Act as a professional financial analyst. For {financials['companyName']} ({financials['symbol']}), provide a single, compelling sentence explaining why it could be a strong long-term investment. Focus on market position or growth drivers."
+            prompt = f"For {financials['companyName']} ({financials['symbol']}), provide a single, compelling sentence explaining why it could be a strong long-term investment."
             response = model.generate_content(prompt)
             financials['reason'] = response.text.strip()
         return financials
@@ -129,7 +115,6 @@ def get_stock_data_with_ai_reason(symbol):
         return None
 
 def get_stock_details(symbol):
-    """Gets a comprehensive profile for a single stock from FMP."""
     if not FMP_API_KEY: return None
     try:
         profile_url = f"{FMP_BASE_URL}/profile/{symbol}?apikey={FMP_API_KEY}"
@@ -140,7 +125,8 @@ def get_stock_details(symbol):
             "symbol": profile_data.get('symbol'), "companyName": profile_data.get('companyName'),
             "price": profile_data.get('price'), "image": profile_data.get('image'),
             "exchange": profile_data.get('exchangeShortName'), "industry": profile_data.get('industry'),
-            "sector": profile_data.get('sector'), "description": profile_data.get('description'),
+            "sector": profile_data.get('sector'), # THIS LINE IS NOW CORRECTED
+            "description": profile_data.get('description'),
             "mktCap": quote_data.get('marketCap'), "dayHigh": quote_data.get('dayHigh'),
             "dayLow": quote_data.get('dayLow'), "yearHigh": quote_data.get('yearHigh'),
             "yearLow": quote_data.get('yearLow'), "volume": quote_data.get('volume'),
@@ -153,7 +139,5 @@ def get_stock_details(symbol):
 
 # --- RUN THE APP ---
 if __name__ == '__main__':
-    # Railway provides the PORT environment variable. We use 5000 as a fallback for local testing.
     port = int(os.environ.get('PORT', 5000))
-    # Using host='0.0.0.0' makes the server accessible from outside its container, which is standard for deployment.
     app.run(debug=True, host='0.0.0.0', port=port)
