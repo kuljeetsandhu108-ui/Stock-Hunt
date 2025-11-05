@@ -1,31 +1,72 @@
+<!-- /templates/index.html -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Stock Screener</title>
-    <!-- UPDATED: Link now points to the file inside the 'static' folder -->
-    <link rel="stylesheet" href="/static/style.css">
+    <title>GeniusMind AI - Stock Screener</title>
+    <!-- Link to our future CSS file -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Google Fonts for a professional look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <div class="chat-container">
-            <div class="chat-header">
-                <h2>AI Stock Screener</h2>
+
+    <div class="dashboard-container">
+        <!-- Header Section -->
+        <header class="dashboard-header">
+            <h1>GeniusMind AI Stock Screener</h1>
+            <p class="tagline">Your Personal High-End Coder for Investment Insights</p>
+        </header>
+
+        <!-- Main Chat & Results Interface -->
+        <main class="chat-interface">
+            <!-- The message display window -->
+            <div id="chat-window" class="chat-window">
+                <div class="chat-message bot-message">
+                    <p class="message-text">Welcome. I am ready to analyze the markets for you. What is your investment goal? For example, you could ask: "Find stocks that can give high returns in the next 5 years with less investment."</p>
+                </div>
             </div>
-            <div class="chat-box" id="chat-box">
-                <!-- Chat messages will be dynamically appended here by JavaScript -->
+
+            <!-- The loading/processing indicator -->
+            <div id="loading-indicator" class="loading-indicator" style="display: none;">
+                <div class="spinner"></div>
+                <p>Running high-end processing... Analyzing market data...</p>
             </div>
-            <div class="chat-input">
-                <input type="text" id="user-input" placeholder="Ask about stocks...">
-                <button id="send-btn">Send</button>
+            
+            <!-- The results area, initially hidden -->
+            <div id="results-area" class="results-area" style="display: none;">
+                <!-- The beautiful table will be injected here by JavaScript -->
+            </div>
+
+            <!-- User Input Section -->
+            <footer class="chat-input-area">
+                <textarea id="user-input" class="user-input" placeholder="Ask your question here..." rows="1"></textarea>
+                <button id="send-btn" class="send-btn">
+                    <!-- SVG Icon for sending message -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z"/>
+                    </svg>
+                </button>
+            </footer>
+        </main>
+        
+        <!-- Modal for displaying detailed stock information -->
+        <div id="stock-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <div id="modal-body" class="modal-body">
+                    <!-- Detailed stock data will be injected here by JavaScript -->
+                </div>
             </div>
         </div>
-        <div class="results-container" id="results-container">
-            <!-- Stock data, tables, and detailed views will be rendered here -->
-        </div>
+
     </div>
-    <!-- UPDATED: Script tag now points to the file inside the 'static' folder -->
-    <script src="/static/script.js"></script>
+
+    <!-- Link to our future JavaScript file -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
