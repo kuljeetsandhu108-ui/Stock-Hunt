@@ -63,7 +63,7 @@ def get_stock_recommendation():
             quant_profiles.append({"ticker": profile_data_list[0].get('symbol'), "companyName": profile_data_list[0].get('companyName')})
         if not quant_profiles:
              return jsonify([{"ticker": "SYSTEM", "company_name": "Data Aggregation Failed", "reason": "Could not retrieve profiles for the found stocks."}])
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"**CRITICAL INSTRUCTION:** Your ONLY output must be a valid JSON array of objects. Do NOT include any text before the opening '[' or after the final ']'.\n**Task:** Analyze these stocks: {json.dumps(quant_profiles)} for a user whose goal is '{user_query}'. Select the top 3 and give a short, data-driven reason. \n**JSON Format:** `[{{\"ticker\": \"...\", \"company_name\": \"...\", \"reason\": \"...\"}}]`"
         response = model.generate_content(prompt)
         start_index = response.text.find('[')

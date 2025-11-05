@@ -1,4 +1,4 @@
-<!-- /templates/index.html -->
+<!-- /templates/index.html (v2 Dashboard Blueprint) -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -6,9 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GeniusMind AI - Stock Screener</title>
-    <!-- Link to our future CSS file -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <!-- Google Fonts for a professional look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -16,37 +14,28 @@
 <body>
 
     <div class="dashboard-container">
-        <!-- Header Section -->
+        <!-- Header Section (Unchanged) -->
         <header class="dashboard-header">
             <h1>GeniusMind AI Stock Screener</h1>
             <p class="tagline">Your Personal High-End Coder for Investment Insights</p>
         </header>
 
-        <!-- Main Chat & Results Interface -->
+        <!-- Main Chat Interface (Unchanged) -->
         <main class="chat-interface">
-            <!-- The message display window -->
             <div id="chat-window" class="chat-window">
                 <div class="chat-message bot-message">
-                    <p class="message-text">Welcome. I am ready to analyze the markets for you. What is your investment goal? For example, you could ask: "Find stocks that can give high returns in the next 5 years with less investment."</p>
+                    <p class="message-text">Welcome. I am ready to perform a deep analysis of the markets for you. What is your investment goal?</p>
                 </div>
             </div>
 
-            <!-- The loading/processing indicator -->
             <div id="loading-indicator" class="loading-indicator" style="display: none;">
                 <div class="spinner"></div>
                 <p>Running high-end processing... Analyzing market data...</p>
             </div>
-            
-            <!-- The results area, initially hidden -->
-            <div id="results-area" class="results-area" style="display: none;">
-                <!-- The beautiful table will be injected here by JavaScript -->
-            </div>
 
-            <!-- User Input Section -->
             <footer class="chat-input-area">
-                <textarea id="user-input" class="user-input" placeholder="Ask your question here..." rows="1"></textarea>
+                <textarea id="user-input" class="user-input" placeholder="Example: 'Find undervalued Indian stocks under 100 rupees'" rows="1"></textarea>
                 <button id="send-btn" class="send-btn">
-                    <!-- SVG Icon for sending message -->
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                         <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z"/>
                     </svg>
@@ -54,19 +43,74 @@
             </footer>
         </main>
         
-        <!-- Modal for displaying detailed stock information -->
+        <!-- ====================================================== -->
+        <!-- ===== NEW V2.0 RE-ARCHITECTED STOCK DETAIL MODAL ===== -->
+        <!-- ====================================================== -->
         <div id="stock-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <span class="close-button">&times;</span>
-                <div id="modal-body" class="modal-body">
-                    <!-- Detailed stock data will be injected here by JavaScript -->
+
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h2 id="modal-company-name">Company Name (TICKER)</h2>
+                    <p id="modal-sector-industry">Sector & Industry</p>
+                </div>
+
+                <!-- Main Dashboard Grid -->
+                <div id="modal-body" class="modal-body dashboard-grid">
+
+                    <!-- Left Column: Live Data & Profile -->
+                    <div class="dashboard-left">
+                        <h3>Live Market Data</h3>
+                        <div class="live-price-section">
+                            <div id="modal-live-price" class="live-price">--</div>
+                            <div id="modal-price-change" class="price-change">--</div>
+                        </div>
+                        <div class="quote-grid">
+                            <div><span>Day Low</span><strong id="modal-day-low">--</strong></div>
+                            <div><span>Day High</span><strong id="modal-day-high">--</strong></div>
+                            <div><span>Year Low</span><strong id="modal-year-low">--</strong></div>
+                            <div><span>Year High</span><strong id="modal-year-high">--</strong></div>
+                            <div><span>Market Cap</span><strong id="modal-market-cap">--</strong></div>
+                            <div><span>Volume</span><strong id="modal-volume">--</strong></div>
+                        </div>
+                        <h3>Company Profile</h3>
+                        <p id="modal-description">Company description will load here...</p>
+                        <a id="modal-website" href="#" target="_blank" rel="noopener noreferrer">Visit Website</a>
+                    </div>
+
+                    <!-- Right Column: Fundamentals & Technicals -->
+                    <div class="dashboard-right">
+                        <h3>Fundamental Analysis</h3>
+                        <table class="data-table" id="fundamentals-table">
+                            <!-- JS will populate this -->
+                        </table>
+
+                        <h3>Technical Indicators</h3>
+                        <div class="gauges-container">
+                            <!-- RSI Gauge Placeholder -->
+                            <div class="gauge">
+                                <div class="gauge__body">
+                                    <div class="gauge__fill" id="rsi-gauge-fill"></div>
+                                    <div class="gauge__cover"></div>
+                                </div>
+                                <div class="gauge__label">RSI (14)</div>
+                                <div class="gauge__value" id="rsi-gauge-value">--</div>
+                            </div>
+                            <!-- SMA vs Price Placeholder -->
+                            <div class="indicator">
+                               <div class="indicator-label">Price vs SMA (50)</div>
+                               <div id="sma-indicator-value" class="indicator-value neutral">--</div>
+                               <div id="sma-indicator-text" class="indicator-text">Price data needed</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
     </div>
 
-    <!-- Link to our future JavaScript file -->
+    <!-- JavaScript (We will upgrade this in Phase 4) -->
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
